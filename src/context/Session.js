@@ -14,7 +14,7 @@ class Session {
         this.participantId = participantId;
 
         this.client = mqtt.connect(
-            `ws://52.50.57.4:9001/`,
+            `ws://${window.location.hostname}:9001/`,
             {
                 clean: true,
                 connectTimeout: 4000,
@@ -28,7 +28,7 @@ class Session {
                     `swarm/session/${sessionId}/control/+`,
                     `swarm/session/${sessionId}/updates/+`,
                 ], (err) => {
-                    if (!err) console.log("[MQTT] Subscribed to /swarm/session/#");
+                    if (!err) console.log("[MQTT] Subscribed to /swarm/session/+");
                 });
             } else {
                 this.client.subscribe([
