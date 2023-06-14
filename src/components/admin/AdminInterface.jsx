@@ -8,6 +8,8 @@ export default function AdminInterface({ username, password, questions, sessions
   const [selectedSession, setSelectedSession] = useState({ id: 0, duration: 0, question_id: "", status: "" });
   const [participantList, setParticipantList] = useState(null);
   const [currentSession, setCurrentSession] = useState(null);
+  const [logs, setLogs] = useState([]);
+  const [selectedLog, setSelectedLog] = useState('');
   const [sessionStatus, setSessionStatus] = useState(SessionStatus.Joining);
   const [question, setQuestion] = useState({ status: QuestionStatus.Undefined });
   const [targetDateCountdown, setTargetDateCountdown] = useState('2023-04-01T00:00:00Z');
@@ -90,13 +92,13 @@ export default function AdminInterface({ username, password, questions, sessions
     waitOrCloseSession();
   }
   const waitOrCloseSession = () => {
-    if(!waitingCountDown) {
+    if (!waitingCountDown) {
       setWaitingCountDown(true);
       timerId = setTimeout(() => {
         currentSession.publishControl({ type: 'stop' });
         setWaitingCountDown(false);
       }, selectedSession.duration * 1000);
-    } else{
+    } else {
       clearTimeout(timerId);
       currentSession.publishControl({ type: 'stop' });
       setWaitingCountDown(false);
@@ -130,6 +132,39 @@ export default function AdminInterface({ username, password, questions, sessions
       console.log(error);
     });
   }
+
+  const downloadFolder = () => {
+    let folderPath = selectedLog
+    fetch(`/api/download_log/${folderPath}`)
+      .then(response => response.blob())
+      .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        let folder_name = folderPath + ".zip";
+        link.setAttribute('download', folder_name);
+        document.body.appendChild(link);
+        link.click();
+      })
+      .catch(error => {
+        console.log(error);
+      });
+  };
+
+  const fetchlogs = async () => {
+    try {
+      const response = await fetch('/api/list_logs');
+      const data = await response.json();
+      setLogs(data.logs);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+  const handleLogSelect = (event) => {
+    const selectedLog = event.target.value;
+    setSelectedLog(selectedLog);
+  };
+
   return (
     <div className="main">
       <div className="sessionlist">
@@ -157,6 +192,17 @@ export default function AdminInterface({ username, password, questions, sessions
         <button onClick={startSession}>{waitingCountDown ? "Stop" : "Start"}</button>
         <label>Ready: {participantList ? participantList.filter(participant => participant.status === 'ready').length : 0}/{participantList ? participantList.length : 0}</label>
         <textarea className="inputParticipant" readOnly value={participantList ? participantList.map(p => `${p.username} -> ${p.status}`).join("\n") : "Sin participantes todavía"} />
+      </div>
+      <div>
+        <h2>Lista de logs:</h2>
+        <select value={selectedLog} onChange={handleLogSelect}>
+          <option value="">Seleccionar log</option>
+          {logs.map(log => (
+            <option key={log} value={log}>{log}</option>
+          ))}
+        </select>
+        <button onClick={fetchlogs}>Obtener logs</button>
+        <button onClick={downloadFolder}>Descargar log</button>
       </div>
     </div>
   );
