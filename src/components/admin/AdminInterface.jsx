@@ -135,7 +135,7 @@ export default function AdminInterface({ username, password, questions, sessions
 
   const downloadFolder = () => {
     let folderPath = selectedLog
-    fetch(`/api/download_log/${folderPath}`)
+    fetch(`/api/downloadLog/${folderPath}`)
       .then(response => response.blob())
       .then(blob => {
         const url = window.URL.createObjectURL(blob);
@@ -150,10 +150,26 @@ export default function AdminInterface({ username, password, questions, sessions
         console.log(error);
       });
   };
+  const downloadAllLogs = () => {
+    fetch(`/api/downloadAllLogs`)
+      .then(response => response.blob())
+      .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        let folder_name = "AllLogs.zip";
+        link.setAttribute('download', folder_name);
+        document.body.appendChild(link);
+        link.click();
+      })
+      .catch(error => {
+        console.log(error);
+      });
+  };
 
   const fetchlogs = async () => {
     try {
-      const response = await fetch('/api/list_logs');
+      const response = await fetch('/api/listLogs');
       const data = await response.json();
       setLogs(data.logs);
     } catch (error) {
@@ -197,12 +213,16 @@ export default function AdminInterface({ username, password, questions, sessions
         <h2>Lista de logs:</h2>
         <select value={selectedLog} onChange={handleLogSelect}>
           <option value="">Seleccionar log</option>
-          {logs.map(log => (
-            <option key={log} value={log}>{log}</option>
-          ))}
+          {logs.map(log => {
+            if (log !== "zips") {
+              return <option key={log} value={log}>{log}</option>;
+            }
+            return null;
+          })}
         </select>
         <button onClick={fetchlogs}>Obtener logs</button>
         <button onClick={downloadFolder}>Descargar log</button>
+        <button onClick={downloadAllLogs}>Descargar todos los logs</button>
       </div>
     </div>
   );
