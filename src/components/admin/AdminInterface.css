@@ -1,77 +1,114 @@
-.main {
+.admin-interface {
     display: flex;
     height: 100vh;
     justify-content: center;
     align-items: center;
-}
-
-.sessionlist {
+  }
+  
+  .admin-interface  .left-column {
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
     align-items: center;
     padding: 20px;
     background-color: #f2f2f2;
-    width: 200px;
-    height: 400px;
+    width: 30%;
+    height: 80%;
     margin-right: 20px;
-}
-
-.sessiondetails {
+  }
+  
+  .admin-interface  .sessiondetails {
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: flex-start;
     padding: 20px;
+    width: 200px;
+    height: 20%;
+  }
+  
+  .admin-interface  .startsession {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    width: 200px;
+    height: 200px;
+  }
+  .admin-interface  .sessionlist {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    width: 200px;
+    height: 200px;
+  }
+  
+  .admin-interface  .center-column {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
     background-color: #ffffff;
     width: 300px;
-    height: 400px;
-    margin-right: 20px;
-}
-
-.startsession {
+    height: 80%;
+  }
+  
+  .admin-interface  .loglist {
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
     padding: 20px;
     background-color: #ffffff;
-    width: 200px;
-    height: 400px;
-}
-
-input[type="text"],
-select,
-button {
+    width: 100%;
+    height: 250px;
+    margin-top: 0px;
+  }
+  
+  .admin-interface  input[type="text"],
+  select,
+  button {
     margin: 5px;
     padding: 5px;
     font-size: 16px;
-}
-
-input[type="text"],
-select {
+  }
+  
+  .admin-interface input[type="text"],
+  select {
     width: 100%;
-}
-
-button {
+  }
+  
+  .admin-interface  button {
     background-color: #4CAF50;
     color: white;
     border: none;
     cursor: pointer;
+    width: 100%;
     padding: 10px 20px;
     border-radius: 5px;
-}
-
-button:hover {
+  }
+  
+  .admin-interface  button:hover {
     background-color: #3e8e41;
-}
-
-label {
+  }
+  
+  .admin-interface  label {
     margin: 5px;
     font-size: 16px;
-}
-.inputParticipant {
-    height: '100px';
-    overflow: 'auto';
-    max-width: '50px';
-}
+  }
+  .admin-interface  #label-log {
+    margin: 5px;
+    font-size: 25px;
+  }
+  
+  .admin-interface  .inputParticipant {
+    height: 100px;
+    overflow: auto;
+    width: 300px;
+  }
+  
+  .admin-interface .right-column {
+    /* Estilos personalizados para el lateral derecho */
+  }
+  

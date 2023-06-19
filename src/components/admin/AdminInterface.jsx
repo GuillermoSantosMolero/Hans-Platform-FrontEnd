@@ -1,8 +1,8 @@
-import { React, useEffect, useState, useRef } from "react";
+import { React, useEffect, useState, useCallback } from "react";
 
 import './AdminInterface.css';
-import { Session, SessionStatus } from '../../context/Session';
-import { QuestionStatus } from '../../context/Question';
+import { Session } from '../../context/Session';
+import CountDown from '../session/Countdown';
 
 export default function AdminInterface({ username, password, questions, sessions, onSessionCreated }) {
   const [selectedSession, setSelectedSession] = useState({ id: 0, duration: 0, question_id: "", status: "" });
@@ -10,43 +10,27 @@ export default function AdminInterface({ username, password, questions, sessions
   const [currentSession, setCurrentSession] = useState(null);
   const [logs, setLogs] = useState([]);
   const [selectedLog, setSelectedLog] = useState('');
-  const [sessionStatus, setSessionStatus] = useState(SessionStatus.Joining);
-  const [question, setQuestion] = useState({ status: QuestionStatus.Undefined });
-  const [targetDateCountdown, setTargetDateCountdown] = useState('2023-04-01T00:00:00Z');
   const [waitingCountDown, setWaitingCountDown] = useState(false);
+  const [targetDateCountdown, setTargetDateCountdown] = useState('2023-04-01T00:00:00Z');
   let timerId;
+
   useEffect(() => {
-    if (sessions) {
+    if (sessions && sessions.length > 0) {
       setSelectedSession(sessions[0]);
-      if (questions)
-        setSelectedSession({ ...selectedSession, question_id: questions[0].id })
     }
+  }, [sessions]);
+
+  useEffect(() => {
+    if (questions && questions.length > 0 && selectedSession) {
+      setSelectedSession((prevSelectedSession) => ({
+        ...prevSelectedSession,
+        question_id: questions[0].id
+      }));
+    }
+     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [questions]);
 
-  useEffect(() => {
-    if (selectedSession.id !== 0) {
-      getParticipantsBySession();
-      setCurrentSession(new Session(selectedSession.id, 0,
-        (controlMessage) => {
-          if (controlMessage.participant !== 0) {
-            if (selectedSession.id === controlMessage.session)
-              switch (controlMessage.type) {
-                case 'join':
-                  getParticipantsBySession();
-                  break;
-                case 'ready':
-                  getParticipantsBySession();
-                  break;
-                default:
-                  break;
-              }
-          }
-        }
-      ));
-    }
-  }, [selectedSession.id]);
-
-  const getParticipantsBySession = () => {
+  const getParticipantsBySession = useCallback(() => {
     fetch(
       `/api/session/${selectedSession.id}/allParticipants`,
       {
@@ -73,7 +57,32 @@ export default function AdminInterface({ username, password, questions, sessions
     }).catch(error => {
       console.log(error);
     });
-  }
+  }, [selectedSession.id, username, password]);
+
+  useEffect(() => {
+    if (selectedSession.id !== 0) {
+      getParticipantsBySession();
+      setCurrentSession(new Session(selectedSession.id, 0, (controlMessage) => {
+        if (controlMessage.participant !== 0) {
+          if (selectedSession.id === Number(controlMessage.session)) {
+            switch (controlMessage.type) {
+              case 'join':  
+                console.log("case: join");
+                getParticipantsBySession();
+                break;
+              case 'ready':
+                console.log("case: ready");
+                getParticipantsBySession();
+                break;
+              default:
+                break;
+            }
+          }
+        }
+      }));
+    }
+  }, [selectedSession.id, getParticipantsBySession]);
+
   const handleSessionChange = (event) => {
     const sessionId = parseInt(event.target.value);
     const session = sessions.find(s => s.id === sessionId);
@@ -84,11 +93,12 @@ export default function AdminInterface({ username, password, questions, sessions
   const handleQuestionChange = (event) => {
     setSelectedSession({ ...selectedSession, question_id: event.target.value });
     currentSession.publishControl({ type: 'setup', question_id: event.target.value });
-    getParticipantsBySession();
   }
 
   const startSession = (event) => {
     currentSession.publishControl({ type: 'start', targetDate: Date.now() + selectedSession.duration * 1000 });
+    console.log(new Date()+selectedSession.duration + 13)
+    setTargetDateCountdown((Date.now() + selectedSession.duration * 1000 +200))
     waitOrCloseSession();
   }
   const waitOrCloseSession = () => {
@@ -97,11 +107,13 @@ export default function AdminInterface({ username, password, questions, sessions
       timerId = setTimeout(() => {
         currentSession.publishControl({ type: 'stop' });
         setWaitingCountDown(false);
+        setTargetDateCountdown(Date.now())
       }, selectedSession.duration * 1000);
     } else {
       clearTimeout(timerId);
       currentSession.publishControl({ type: 'stop' });
       setWaitingCountDown(false);
+      setTargetDateCountdown(Date.now())
     }
   }
   const createSession = (event) => {
@@ -182,9 +194,9 @@ export default function AdminInterface({ username, password, questions, sessions
   };
 
   return (
-    <div className="main">
+  <div className="admin-interface">
+    <div className="left-column">
       <div className="sessionlist">
-
         <select onChange={handleSessionChange}>
           {sessions && sessions.map(session => (
             <option key={session.id} value={session.id}>Session {session.id}</option>
@@ -192,6 +204,7 @@ export default function AdminInterface({ username, password, questions, sessions
         </select>
         <button onClick={createSession}>New Session</button>
       </div>
+
       <div className="sessiondetails">
         <label>Id:</label>
         <input type="text" readOnly value={selectedSession && selectedSession.id} />
@@ -204,13 +217,21 @@ export default function AdminInterface({ username, password, questions, sessions
           ))}
         </select>
       </div>
-      <div className="startsession" >
+
+      <div className="startsession">
+        <CountDown targetDate={targetDateCountdown} />
         <button onClick={startSession}>{waitingCountDown ? "Stop" : "Start"}</button>
+      </div>
+    </div>
+
+    <div className="center-column">
+      <div className="startsession">
         <label>Ready: {participantList ? participantList.filter(participant => participant.status === 'ready').length : 0}/{participantList ? participantList.length : 0}</label>
         <textarea className="inputParticipant" readOnly value={participantList ? participantList.map(p => `${p.username} -> ${p.status}`).join("\n") : "Sin participantes todavía"} />
       </div>
-      <div>
-        <h2>Lista de logs:</h2>
+
+      <div className="loglist">
+      <label id="label-log">Lista de logs:</label>
         <select value={selectedLog} onChange={handleLogSelect}>
           <option value="">Seleccionar log</option>
           {logs.map(log => {
@@ -225,5 +246,10 @@ export default function AdminInterface({ username, password, questions, sessions
         <button onClick={downloadAllLogs}>Descargar todos los logs</button>
       </div>
     </div>
+
+    <div className="right-column">
+      {/* Contenido del lateral derecho */}
+    </div>
+  </div>
   );
 }
