@@ -3,6 +3,8 @@ import { React, useEffect, useState, useCallback } from "react";
 import './AdminInterface.css';
 import { Session } from '../../context/Session';
 import CountDown from '../session/Countdown';
+import BoardView from '../BoardView';
+import QuestionDetails from '../session/QuestionDetails';
 
 export default function AdminInterface({ username, password, questions, sessions, onSessionCreated }) {
   const [selectedSession, setSelectedSession] = useState({ id: 0, duration: 0, question_id: "", status: "" });
@@ -11,7 +13,12 @@ export default function AdminInterface({ username, password, questions, sessions
   const [logs, setLogs] = useState([]);
   const [selectedLog, setSelectedLog] = useState('');
   const [waitingCountDown, setWaitingCountDown] = useState(false);
+  const [activeQuestion, setActiveQuestion] = useState({});
+  const [userMagnetPosition] = useState({ x: 0, y: 0, norm: [] });
+  const [peerMagnetPositions, setPeerMagnetPositions] = useState({});
+  const [centralCuePosition, setCentralCuePosition] = useState([]);
   const [targetDateCountdown, setTargetDateCountdown] = useState('2023-04-01T00:00:00Z');
+  
   let timerId;
 
   useEffect(() => {
@@ -26,6 +33,7 @@ export default function AdminInterface({ username, password, questions, sessions
         ...prevSelectedSession,
         question_id: questions[0].id
       }));
+      serBoardQuestion(questions[0].id);
     }
      // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [questions]);
@@ -79,9 +87,36 @@ export default function AdminInterface({ username, password, questions, sessions
             }
           }
         }
-      }));
+      },
+      (participantId, updateMessage) => {
+        setPeerMagnetPositions((peerPositions) => {
+          console.log(peerPositions)
+          return {
+            ...peerPositions,
+            [participantId]: updateMessage.data.position
+          }
+        });
+      }
+      )
+      );
     }
   }, [selectedSession.id, getParticipantsBySession]);
+
+  useEffect(() => {
+    // Update central Cue based on magnet positions
+    if (peerMagnetPositions && peerMagnetPositions.length > 0) {
+      const usablePeerPositions = Object.keys(peerMagnetPositions).map(
+        k => peerMagnetPositions[k]
+      ).filter(peerPosition => peerPosition.length === activeQuestion.answers.length);
+      setCentralCuePosition(
+        usablePeerPositions.reduce(
+          (cuePosition, peerPosition) => cuePosition.map(
+            (value, i) => value + peerPosition[i]
+          )
+        ).map(value => value / (1 + usablePeerPositions.length))
+      );
+    }
+  }, [peerMagnetPositions]);
 
   const handleSessionChange = (event) => {
     const sessionId = parseInt(event.target.value);
@@ -93,8 +128,35 @@ export default function AdminInterface({ username, password, questions, sessions
   const handleQuestionChange = (event) => {
     setSelectedSession({ ...selectedSession, question_id: event.target.value });
     currentSession.publishControl({ type: 'setup', question_id: event.target.value });
+    serBoardQuestion(event.target.value);
   }
 
+  const serBoardQuestion = (question_id) =>{
+    fetch(
+      `/api/question/${question_id}`,
+      {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+        },
+      }
+    ).then(res => {
+      if (res.status === 200) {
+        res.json().then(data => {
+            setActiveQuestion({
+              id: data.id,
+              prompt: data.prompt,
+              answers: data.answers,
+              image: `/api/question/${data.id}/image`,
+            });
+        });
+      } else {
+        res.text().then(msg => console.log(msg));
+      }
+    }).catch(error => {
+      console.log(error);
+    });
+  }
   const startSession = (event) => {
     currentSession.publishControl({ type: 'start', targetDate: Date.now() + selectedSession.duration * 1000 });
     console.log(new Date()+selectedSession.duration + 13)
@@ -192,7 +254,6 @@ export default function AdminInterface({ username, password, questions, sessions
     const selectedLog = event.target.value;
     setSelectedLog(selectedLog);
   };
-
   return (
   <div className="admin-interface">
     <div className="left-column">
@@ -219,17 +280,20 @@ export default function AdminInterface({ username, password, questions, sessions
       </div>
 
       <div className="startsession">
-        <CountDown targetDate={targetDateCountdown} />
         <button onClick={startSession}>{waitingCountDown ? "Stop" : "Start"}</button>
+        <label>Ready: {participantList ? participantList.filter(participant => participant.status === 'ready').length : 0}/{participantList ? participantList.length : 0}</label>
+        <textarea className="inputParticipant" readOnly value={participantList ? participantList.map(p => `${p.username} -> ${p.status}`).join("\n") : "Sin participantes todavía"} />
       </div>
     </div>
 
     <div className="center-column">
-      <div className="startsession">
-        <label>Ready: {participantList ? participantList.filter(participant => participant.status === 'ready').length : 0}/{participantList ? participantList.length : 0}</label>
-        <textarea className="inputParticipant" readOnly value={participantList ? participantList.map(p => `${p.username} -> ${p.status}`).join("\n") : "Sin participantes todavía"} />
+      <div>  
+        <QuestionDetails
+              image={activeQuestion.id ? activeQuestion.image : ""}
+              prompt={activeQuestion.id ? activeQuestion.prompt : "Question not defined yet"}
+        />
+        <CountDown targetDate={targetDateCountdown} />
       </div>
-
       <div className="loglist">
       <label id="label-log">Lista de logs:</label>
         <select value={selectedLog} onChange={handleLogSelect}>
@@ -248,7 +312,15 @@ export default function AdminInterface({ username, password, questions, sessions
     </div>
 
     <div className="right-column">
-      {/* Contenido del lateral derecho */}
+        <BoardView
+              answers={activeQuestion.answers ? activeQuestion.answers : []}
+              centralCuePosition={centralCuePosition}
+              peerMagnetPositions={peerMagnetPositions && Object.keys(peerMagnetPositions).map(
+                k => peerMagnetPositions[k]
+              )}
+              userMagnetPosition={userMagnetPosition}
+              onUserMagnetMove={null}
+        />
     </div>
   </div>
   );

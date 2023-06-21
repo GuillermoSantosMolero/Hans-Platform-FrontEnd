@@ -13,8 +13,7 @@
     padding: 20px;
     background-color: #f2f2f2;
     width: 30%;
-    height: 80%;
-    margin-right: 20px;
+    height: 100%;
   }
   
   .admin-interface  .sessiondetails {
@@ -24,7 +23,7 @@
     align-items: flex-start;
     padding: 20px;
     width: 200px;
-    height: 20%;
+    height: 30%;
   }
   
   .admin-interface  .startsession {
@@ -33,7 +32,7 @@
     justify-content: center;
     align-items: center;
     width: 200px;
-    height: 200px;
+    height: 300px;
   }
   .admin-interface  .sessionlist {
     display: flex;
@@ -41,17 +40,17 @@
     justify-content: center;
     align-items: center;
     width: 200px;
-    height: 200px;
+    height: 150px;
   }
   
   .admin-interface  .center-column {
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 20px;
     background-color: #ffffff;
     width: 300px;
-    height: 80%;
+    height: 90%;
+    margin: 2%;
   }
   
   .admin-interface  .loglist {
@@ -63,7 +62,7 @@
     background-color: #ffffff;
     width: 100%;
     height: 250px;
-    margin-top: 0px;
+    margin-top: 5%;
   }
   
   .admin-interface  input[type="text"],
@@ -109,6 +108,9 @@
   }
   
   .admin-interface .right-column {
-    /* Estilos personalizados para el lateral derecho */
+    height: 100%;
+    width: 40%;
+    padding: 3%;
+    background-color: #f2f2f2;
   }
   
