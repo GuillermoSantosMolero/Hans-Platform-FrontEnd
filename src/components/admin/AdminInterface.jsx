@@ -1,7 +1,7 @@
 import { React, useEffect, useState, useCallback } from "react";
 
 import './AdminInterface.css';
-import { Session } from '../../context/Session';
+import { Session, SessionStatus } from '../../context/Session';
 import CountDown from '../session/Countdown';
 import BoardView from '../BoardView';
 import QuestionDetails from '../session/QuestionDetails';
@@ -10,6 +10,7 @@ export default function AdminInterface({ username, password, questions, sessions
   const [selectedSession, setSelectedSession] = useState({ id: 0, duration: 0, question_id: "", status: "" });
   const [participantList, setParticipantList] = useState(null);
   const [currentSession, setCurrentSession] = useState(null);
+  const [sessionStatus, setSessionStatus] = useState(SessionStatus.Waiting);
   const [logs, setLogs] = useState([]);
   const [selectedLog, setSelectedLog] = useState('');
   const [waitingCountDown, setWaitingCountDown] = useState(false);
@@ -76,10 +77,22 @@ export default function AdminInterface({ username, password, questions, sessions
             switch (controlMessage.type) {
               case 'join':  
                 console.log("case: join");
+                if(sessionStatus === SessionStatus.Active){
+                  setTimeout(function() {
+                    currentSession.publishControl({ type: 'setup', question_id: selectedSession.question_id});
+                  }, 1000);
+                  
+                }
                 getParticipantsBySession();
                 break;
               case 'ready':
                 console.log("case: ready");
+                if(sessionStatus === SessionStatus.Active){
+                  setTimeout(function() {
+                    let targetDate = new Date(targetDateCountdown);
+                    currentSession.publishControl({ type: 'started', targetDate: targetDate.toISOString() , positions: peerMagnetPositions});
+                  }, 1000);
+                }
                 getParticipantsBySession();
                 break;
               default:
@@ -90,7 +103,6 @@ export default function AdminInterface({ username, password, questions, sessions
       },
       (participantId, updateMessage) => {
         setPeerMagnetPositions((peerPositions) => {
-          console.log(peerPositions)
           return {
             ...peerPositions,
             [participantId]: updateMessage.data.position
@@ -104,6 +116,7 @@ export default function AdminInterface({ username, password, questions, sessions
 
   useEffect(() => {
     // Update central Cue based on magnet positions
+    console.log(centralCuePosition);
     if (peerMagnetPositions && peerMagnetPositions.length > 0) {
       const usablePeerPositions = Object.keys(peerMagnetPositions).map(
         k => peerMagnetPositions[k]
@@ -115,6 +128,7 @@ export default function AdminInterface({ username, password, questions, sessions
           )
         ).map(value => value / (1 + usablePeerPositions.length))
       );
+      console.log(centralCuePosition);
     }
   }, [peerMagnetPositions]);
 
@@ -126,6 +140,7 @@ export default function AdminInterface({ username, password, questions, sessions
     setSelectedSession(session);
   }
   const handleQuestionChange = (event) => {
+    setPeerMagnetPositions({});
     setSelectedSession({ ...selectedSession, question_id: event.target.value });
     currentSession.publishControl({ type: 'setup', question_id: event.target.value });
     serBoardQuestion(event.target.value);
@@ -159,7 +174,7 @@ export default function AdminInterface({ username, password, questions, sessions
   }
   const startSession = (event) => {
     currentSession.publishControl({ type: 'start', targetDate: Date.now() + selectedSession.duration * 1000 });
-    console.log(new Date()+selectedSession.duration + 13)
+    setSessionStatus(SessionStatus.Active);
     setTargetDateCountdown((Date.now() + selectedSession.duration * 1000 +200))
     waitOrCloseSession();
   }
@@ -170,12 +185,14 @@ export default function AdminInterface({ username, password, questions, sessions
         currentSession.publishControl({ type: 'stop' });
         setWaitingCountDown(false);
         setTargetDateCountdown(Date.now())
+        setSessionStatus(SessionStatus.Waiting);
       }, selectedSession.duration * 1000);
     } else {
       clearTimeout(timerId);
       currentSession.publishControl({ type: 'stop' });
       setWaitingCountDown(false);
       setTargetDateCountdown(Date.now())
+      setSessionStatus(SessionStatus.Waiting);
     }
   }
   const createSession = (event) => {
@@ -258,7 +275,7 @@ export default function AdminInterface({ username, password, questions, sessions
   <div className="admin-interface">
     <div className="left-column">
       <div className="sessionlist">
-        <select onChange={handleSessionChange}>
+        <select onChange={handleSessionChange} disabled={waitingCountDown}>
           {sessions && sessions.map(session => (
             <option key={session.id} value={session.id}>Session {session.id}</option>
           ))}
@@ -272,7 +289,7 @@ export default function AdminInterface({ username, password, questions, sessions
         <label>Duration:</label>
         <input type="text" value={selectedSession ? selectedSession.duration : ""} onChange={e => setSelectedSession({ ...selectedSession, duration: e.target.value })} />
         <label>Question:</label>
-        <select onChange={handleQuestionChange}>
+        <select onChange={handleQuestionChange} disabled={waitingCountDown}>
           {questions && questions.map(question => (
             <option key={question.id} value={question.id}>{question.prompt}</option>
           ))}

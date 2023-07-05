@@ -52,13 +52,15 @@ export default function SessionView({ sessionId, participantId, onLeave = () => 
       (controlMessage) => {
         switch (controlMessage.type) {
           case 'setup': {
-            if (controlMessage.question_id === null) {
-              setQuestion({ status: QuestionStatus.Undefined });
-            } else {
-              setQuestion({
-                status: QuestionStatus.Loading,
-                id: controlMessage.question_id
-              });
+            if (sessionStatus!== SessionStatus.Active){
+              if (controlMessage.question_id === null) {
+                setQuestion({ status: QuestionStatus.Undefined });
+              } else {
+                setQuestion({
+                  status: QuestionStatus.Loading,
+                  id: controlMessage.question_id
+                });
+              }
             }
             break;
           }
@@ -68,19 +70,21 @@ export default function SessionView({ sessionId, participantId, onLeave = () => 
             break;
           }
           case 'started': {
-            setSessionStatus(SessionStatus.Active);
-            setTargetDateCountdown((controlMessage.targetDate + 13))
-            let positions = JSON.parse(controlMessage.positions);
-            if (peerMagnetPositions.length !== 0) {
-              for (const participant in positions) {
-                let usablePeerPositions = positions[participant].slice(positions[participant].indexOf('Z') + 2).split(',').map(parseFloat);
-                if(participant !== participantId){
-                  setPeerMagnetPositions((peerPositions) => {
-                    return {
-                      ...peerPositions,
-                      [participant]: usablePeerPositions
-                    }
-                  });
+            if(sessionStatus!== SessionStatus.Active){
+              setSessionStatus(SessionStatus.Active);
+              setTargetDateCountdown((controlMessage.targetDate + 13))
+              let positions = JSON.parse(controlMessage.positions);
+              if (peerMagnetPositions.length !== 0) {
+                for (const participant in positions) {
+                  let usablePeerPositions = positions[participant].slice(positions[participant].indexOf('Z') + 2).split(',').map(parseFloat);
+                  if(participant !== participantId){
+                    setPeerMagnetPositions((peerPositions) => {
+                      return {
+                        ...peerPositions,
+                        [participant]: usablePeerPositions
+                      }
+                    });
+                  }
                 }
               }
             }
