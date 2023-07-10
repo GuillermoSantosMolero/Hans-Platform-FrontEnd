@@ -116,8 +116,7 @@ export default function AdminInterface({ username, password, questions, sessions
 
   useEffect(() => {
     // Update central Cue based on magnet positions
-    console.log(centralCuePosition);
-    if (peerMagnetPositions && peerMagnetPositions.length > 0) {
+    if (peerMagnetPositions && Object.keys(peerMagnetPositions).length > 0) {
       const usablePeerPositions = Object.keys(peerMagnetPositions).map(
         k => peerMagnetPositions[k]
       ).filter(peerPosition => peerPosition.length === activeQuestion.answers.length);
@@ -126,9 +125,8 @@ export default function AdminInterface({ username, password, questions, sessions
           (cuePosition, peerPosition) => cuePosition.map(
             (value, i) => value + peerPosition[i]
           )
-        ).map(value => value / (1 + usablePeerPositions.length))
+        ).map(value => value / (usablePeerPositions.length))
       );
-      console.log(centralCuePosition);
     }
   }, [peerMagnetPositions]);
 
